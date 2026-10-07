@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vegetable Planting Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1F3EC; --surface:#FFFFFF; --ink:#1C261D; --muted:#5D6A5E; --line:#D6DDD2;
+  --leaf:#3D6A2E; --leaf-ink:#FFFFFF; --leaf-soft:#E2ECD9;
+  --rain:#2B6A96; --rain-soft:#DDEAF4;
+  --amber:#A86A12; --amber-soft:#F6E8CF;
+  --frost:#4E6FA0; --red:#A2402F; --red-soft:#F4DDD7;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121712; --surface:#1A211A; --ink:#E5ECE2; --muted:#9CAA9B; --line:#2C362B;
+    --leaf:#8CC070; --leaf-ink:#10170E; --leaf-soft:#22311D;
+    --rain:#7DB6E0; --rain-soft:#1C2C38; --amber:#E2A84E; --amber-soft:#382B15;
+    --frost:#9DB6DC; --red:#E08A78; --red-soft:#3A2420;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121712; --surface:#1A211A; --ink:#E5ECE2; --muted:#9CAA9B; --line:#2C362B;
+  --leaf:#8CC070; --leaf-ink:#10170E; --leaf-soft:#22311D;
+  --rain:#7DB6E0; --rain-soft:#1C2C38; --amber:#E2A84E; --amber-soft:#382B15;
+  --frost:#9DB6DC; --red:#E08A78; --red-soft:#3A2420;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:620px;margin:0 auto;padding:0 16px 110px}
+header.top{max-width:620px;margin:0 auto;padding:18px 16px 4px}
+h1{font-family:"Barlow Condensed","Barlow",sans-serif;font-size:2rem;line-height:1.05;margin:0}
+header.top p{margin:4px 0 0;color:var(--muted)}
+h2{font-family:"Barlow Condensed","Barlow",sans-serif;font-size:1.45rem;margin:26px 0 8px;line-height:1.15}
+h3{font-size:1.05rem;margin:16px 0 6px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)} .small{font-size:.9rem}
+
+/* Month strip: the memorable piece */
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:10px}
+.months button{border:0;border-radius:8px;padding:8px 0 6px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);font-size:.8rem;line-height:1.1;min-height:52px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.months button .r{width:70%;border-radius:2px;background:var(--rain);opacity:.75}
+.months button[aria-pressed="true"]{background:var(--leaf);color:var(--leaf-ink);box-shadow:none}
+.months button[aria-pressed="true"] .r{background:var(--leaf-ink)}
+.cal{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:6px}
+.cal span{font-size:.72rem;text-align:center;padding:6px 0;border-radius:6px;background:var(--bg)}
+.cal span.good{background:var(--leaf);color:var(--leaf-ink)}
+.cal span.ok{background:var(--leaf-soft)}
+.cal span.cur{outline:2px solid var(--ink);outline-offset:-2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+
+/* Crop lists */
+.crop{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:7px}
+.crop .name{flex:1;min-width:0;text-align:left;border:0;background:none;padding:4px 0}
+.crop .name b{display:block}
+.crop .name span{color:var(--muted);font-size:.88rem}
+.pick{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);font-size:1.3rem;flex:none}
+.pick[aria-pressed="true"]{background:var(--leaf);border-color:var(--leaf);color:var(--leaf-ink)}
+.tag{font-size:.75rem;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.tag.good{background:var(--leaf);color:var(--leaf-ink)} .tag.ok{background:var(--leaf-soft)} .tag.no{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.group-h{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 6px}
+.group-h h3{margin:0}
+
+/* Guide card */
+.guide{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.guide .gh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.guide .gh h3{margin:0;font-size:1.15rem}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:10px}
+.facts div{border-top:1px solid var(--line);padding-top:6px}
+.facts dt{font-size:.8rem;color:var(--muted)}
+.facts dd{margin:0;font-weight:600}
+.method{display:inline-block;margin-top:10px;padding:6px 12px;border-radius:10px;background:var(--leaf-soft);font-weight:600}
+.note{font-size:.9rem;color:var(--muted);margin-top:8px}
+.warn{padding:10px 12px;border-radius:12px;background:var(--amber-soft);font-size:.92rem;margin-top:8px}
+.warn.frost{background:var(--rain-soft)}
+.warn.bad{background:var(--red-soft)}
+.comp{margin-top:12px}
+.comp h4{margin:12px 0 6px;font-size:.95rem}
+.cp{padding:8px 10px;border-radius:10px;background:var(--bg);margin-bottom:6px;font-size:.9rem}
+.cp b{margin-right:6px}
+.cp.avoid{background:var(--red-soft)}
+.ev{font-size:.72rem;padding:1px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;vertical-align:1px}
+.ev.res{background:var(--leaf);color:var(--leaf-ink);border-color:var(--leaf)}
+.ev.est{background:var(--leaf-soft)}
+.info{padding:12px 14px;border-radius:14px;background:var(--leaf-soft);font-size:.92rem;margin-top:14px}
+
+/* Forms & buttons */
+label.f{display:block;font-weight:600;margin:14px 0 6px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);min-height:48px}
+.btn{border:0;border-radius:14px;min-height:50px;padding:12px 18px;background:var(--leaf);color:var(--leaf-ink);font-weight:700;width:100%}
+.btn.ghost{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);font-weight:400}
+.btn.rain{background:var(--rain);color:#fff}
+.btn.danger{background:transparent;color:var(--red);box-shadow:inset 0 0 0 1px var(--red);font-weight:400}
+.btns{display:grid;gap:10px;margin-top:18px}
+.row{display:flex;gap:8px;align-items:flex-end}
+.row > *{flex:1}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;min-height:42px}
+.chip[aria-pressed="true"]{background:var(--leaf);border-color:var(--leaf);color:var(--leaf-ink)}
+
+/* Garden */
+.plant{background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--leaf);border-radius:14px;padding:12px 14px;margin-bottom:9px}
+.plant.done{opacity:.6;border-left-color:var(--muted)}
+.plant .ph{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.timeline{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin-top:8px;font-size:.92rem}
+.timeline dt{color:var(--muted)} .timeline dd{margin:0;font-weight:600}
+.plant .acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+/* Rain */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-size:1.5rem;font-family:"Barlow Condensed","Barlow",sans-serif;color:var(--rain);line-height:1.1}
+.stat span{font-size:.8rem;color:var(--muted)}
+.rainlist{margin-top:10px}
+.rainrow{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:6px}
+.rainrow button{border:0;background:none;color:var(--muted);min-height:40px;padding:0 8px}
+.chartbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:10px;overflow-x:auto}
+
+/* Climate table */
+table.clim{width:100%;border-collapse:collapse;font-size:.9rem}
+table.clim th,table.clim td{padding:4px 3px;text-align:center;border-bottom:1px solid var(--line)}
+table.clim input{width:100%;min-height:36px;padding:4px;text-align:center;border-radius:8px;font-size:.88rem}
+.tblwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px}
+
+/* Tabs */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs .inner{display:flex;max-width:620px;width:100%}
+nav.tabs button{flex:1;border:0;background:none;padding:12px 2px 14px;color:var(--muted);font-size:.92rem;min-height:56px}
+nav.tabs button[aria-current="page"]{color:var(--leaf);font-weight:700;box-shadow:inset 0 3px 0 var(--leaf)}
+
+/* Sheet */
+.sheet{position:fixed;inset:0;background:rgba(10,18,10,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.panel{background:var(--bg);width:100%;max-width:620px;max-height:94%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.panel-head h2{margin:0}
+.x{border:0;background:var(--surface);border-radius:50%;width:44px;height:44px;font-size:1.3rem;box-shadow:inset 0 0 0 1px var(--line);flex:none}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.92rem;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Vegetable Planting Guide</h1>
+  <p id="sub"></p>
+</header>
+<main class="wrap" id="view"></main>
+<nav class="tabs" aria-label="Sections"><div class="inner">
+  <button data-tab="plan">What to plant</button>
+  <button data-tab="garden">My garden</button>
+  <button data-tab="rain">Rainfall</button>
+  <button data-tab="climate">Climate</button>
+</div></nav>
+<div class="sheet" id="sheet" hidden><div class="panel" role="dialog" aria-modal="true" id="panel"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ================= Climate presets =================
+   Station normals from climatestotravel.com (Zambia page).
+   Lusaka uses its 1991–2020 table. Others use the site's rounded climate normals.
+   Kafue: no published long-term station table was found. Figures are modelled averages from
+   nomadseason.com; other sites differ by roughly 1–3 °C, so treat them as approximate. */
+const STATIONS = {
+  kafue:{name:'Kafue (about 1,000 m)', min:[19,19,19,17,14,12,11,14,17,20,21,20], max:[27,27,27,27,25,23,23,27,30,32,31,29], rain:[208,252,142,30,12,1,2,1,0,14,86,186]},
+  lusaka:{name:'Lusaka (1,250–1,300 m)', min:[18.2,18,17.3,14.5,11.2,8.6,8.1,10.6,14,16.4,18.3,18.2], max:[27.7,28.1,27,27.8,26.8,25,23.7,27.5,30.7,29.1,30.2,26.9], rain:[185,145,85,25,5,0,0,10,0,10,80,195]},
+  choma:{name:'Choma (1,320 m)', min:[17,17,16,13,9,7,6,9,13,16,18,18], max:[28,28,28,27,26,24,23,27,30,32,31,28], rain:[180,140,115,25,5,0,0,0,0,10,75,165]},
+  kabwe:{name:'Kabwe (1,180 m)', min:[18,18,17,15,12,10,10,12,16,18,19,18], max:[28,28,28,28,26,25,24,27,31,32,31,28], rain:[210,185,110,20,5,0,0,0,0,5,100,220]},
+  livingstone:{name:'Livingstone (900 m)', min:[19,19,18,15,11,8,8,11,15,19,20,20], max:[31,31,31,31,29,26,26,30,34,36,34,32], rain:[175,135,85,20,0,0,0,0,0,10,80,140]},
+  mfuwe:{name:'Mfuwe, Luangwa valley (570 m)', min:[21,21,20,18,14,12,11,13,17,20,22,21], max:[32,32,32,32,32,31,30,33,36,38,37,34], rain:[220,170,120,30,5,0,0,0,0,10,75,170]},
+  chipata:{name:'Chipata (1,030 m)', min:[19,18,18,17,15,13,12,15,18,20,20,19], max:[28,28,29,29,28,26,26,28,31,33,32,29], rain:[280,240,160,40,5,0,0,0,0,10,85,285]},
+  mongu:{name:'Mongu (1,050 m)', min:[20,20,19,17,14,11,10,13,17,19,19,19], max:[30,30,30,31,30,28,28,31,35,36,32,30], rain:[230,210,140,30,5,0,0,0,0,20,95,230]},
+  ndola:{name:'Ndola (1,270 m)', min:[17,17,16,13,9,7,6,9,13,16,18,18], max:[28,28,28,28,28,26,26,29,32,33,31,28], rain:[300,235,170,25,5,0,0,0,0,20,110,265]},
+  kasama:{name:'Kasama (1,380 m)', min:[16,16,16,15,13,10,10,12,14,16,17,17], max:[27,27,28,27,27,26,26,28,31,32,30,28], rain:[255,250,240,65,5,0,0,0,0,35,100,260]},
+  solwezi:{name:'Solwezi (1,390 m)', min:[17,17,16,14,10,8,7,10,13,16,17,17], max:[27,27,28,28,27,26,26,28,31,32,29,27], rain:[275,230,210,50,5,0,0,0,5,35,160,280]}
+};
+const REGIONS = {
+  'I':'Region I: under 800 mm rain a year. Valleys and the driest south, west and east.',
+  'IIa':'Region IIa: 800–1,000 mm. Central and eastern plateau, including Lusaka Province.',
+  'IIb':'Region IIb: 800–1,000 mm, sandier soils. Western Zambia.',
+  'III':'Region III: over 1,000 mm. Northern Zambia.'
+};
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/* ================= Crop data =================
+   Typical figures from general horticultural practice. Varieties differ: the seed packet takes priority.
+   opt: best average (mean) temperature range in °C while the crop is in the ground.
+   frost: true if frost damages or kills it.
+   days: days to first harvest; from: 'transplant' or 'sowing'. tray: weeks in the seed tray before transplanting.
+   water: typical mm per week (1 mm on 1 m² = 1 litre). */
+const CROPS = [
+ {id:'tomato',name:'Tomato',fam:'Fruiting',method:'tray',tray:[4,6],depth:'0.5–1 cm',inrow:'45–60 cm',rows:'90–100 cm',days:[70,90],from:'transplant',harvest:6,water:[25,40],sun:'Full sun',opt:[18,27],frost:true,wetRisk:true,notes:'Stake or cage. Water at the base, not the leaves, to limit leaf disease.'},
+ {id:'pepper',name:'Sweet pepper',fam:'Fruiting',method:'tray',tray:[6,8],depth:'0.5–1 cm',inrow:'40–50 cm',rows:'60–75 cm',days:[60,90],from:'transplant',harvest:8,water:[25,35],sun:'Full sun',opt:[20,30],frost:true,notes:'Slow to germinate. Keep the tray warm.'},
+ {id:'chilli',name:'Chilli',fam:'Fruiting',method:'tray',tray:[6,8],depth:'0.5 cm',inrow:'40–50 cm',rows:'60–75 cm',days:[70,100],from:'transplant',harvest:12,water:[20,30],sun:'Full sun',opt:[20,30],frost:true,notes:'Can keep cropping for many months in a warm spot.'},
+ {id:'eggplant',name:'Eggplant (brinjal)',fam:'Fruiting',method:'tray',tray:[6,8],depth:'0.5–1 cm',inrow:'50–60 cm',rows:'75–90 cm',days:[70,85],from:'transplant',harvest:8,water:[25,35],sun:'Full sun',opt:[21,30],frost:true,notes:'Needs heat to set fruit well.'},
+ {id:'okra',name:'Okra',fam:'Fruiting',method:'direct',depth:'2–3 cm',inrow:'30–45 cm',rows:'60–90 cm',days:[50,65],from:'sowing',harvest:8,water:[25,35],sun:'Full sun',opt:[21,32],frost:true,notes:'Soak seed overnight before sowing. Pick pods young, every 1–2 days.'},
+ {id:'cucumber',name:'Cucumber',fam:'Vine',method:'direct',depth:'2–3 cm',inrow:'30–45 cm',rows:'100–150 cm (or 90 cm on a trellis)',days:[50,70],from:'sowing',harvest:5,water:[25,40],sun:'Full sun',opt:[18,30],frost:true,wetRisk:true,notes:'Dislikes root disturbance, so sow in place.'},
+ {id:'pumpkin',name:'Pumpkin',fam:'Vine',method:'direct',depth:'2–3 cm',inrow:'90–150 cm',rows:'150–200 cm',days:[90,120],from:'sowing',harvest:4,water:[25,35],sun:'Full sun',opt:[18,30],frost:true,wetRisk:true,notes:'Leaves can be eaten too. Needs a lot of space.'},
+ {id:'butternut',name:'Butternut',fam:'Vine',method:'direct',depth:'2–3 cm',inrow:'60–90 cm',rows:'150 cm',days:[90,110],from:'sowing',harvest:4,water:[25,35],sun:'Full sun',opt:[18,30],frost:true,wetRisk:true,notes:'Harvest when the skin is hard and the stalk dries.'},
+ {id:'watermelon',name:'Watermelon',fam:'Vine',method:'direct',depth:'2–3 cm',inrow:'60–90 cm',rows:'150–200 cm',days:[80,100],from:'sowing',harvest:3,water:[25,35],sun:'Full sun',opt:[21,32],frost:true,wetRisk:true,notes:'Reduce watering as fruit ripens for better flavour.'},
+ {id:'beans',name:'Green beans (bush)',fam:'Legume',method:'direct',depth:'2.5–4 cm',inrow:'7–10 cm',rows:'45–60 cm',days:[50,60],from:'sowing',harvest:4,water:[25,30],sun:'Full sun',opt:[16,27],frost:true,notes:'Sow small batches every 3 weeks for a steady supply.'},
+ {id:'cowpea',name:'Cowpea',fam:'Legume',method:'direct',depth:'3–4 cm',inrow:'15–30 cm',rows:'60–75 cm',days:[60,90],from:'sowing',harvest:6,water:[15,25],sun:'Full sun',opt:[20,32],frost:true,notes:'Young leaves can be picked from about 4 weeks. Tolerates dry spells.'},
+ {id:'sweetcorn',name:'Sweetcorn',fam:'Grain',method:'direct',depth:'3–5 cm',inrow:'20–30 cm',rows:'75–90 cm',days:[70,90],from:'sowing',harvest:2,water:[25,35],sun:'Full sun',opt:[18,30],frost:true,notes:'Plant in blocks of at least 4 rows so it pollinates well.'},
+ {id:'sweetpotato',name:'Sweet potato',fam:'Root',method:'cuttings',depth:'Vine cuttings 25–30 cm, two-thirds buried',inrow:'30 cm',rows:'90 cm (on ridges)',days:[120,150],from:'sowing',harvest:4,water:[20,25],sun:'Full sun',opt:[20,30],frost:true,notes:'Planted from vine cuttings, not seed.'},
+ {id:'potato',name:'Irish potato',fam:'Root',method:'tubers',depth:'Seed tubers 8–10 cm deep',inrow:'30 cm',rows:'75 cm',days:[90,120],from:'sowing',harvest:3,water:[25,30],sun:'Full sun',opt:[15,22],frost:true,wetRisk:true,notes:'Use certified seed potatoes. Earth up the stems as they grow.'},
+ {id:'cabbage',name:'Cabbage',fam:'Leafy',method:'tray',tray:[4,6],depth:'0.5–1 cm',inrow:'45–60 cm',rows:'60–75 cm',days:[60,100],from:'transplant',harvest:3,water:[25,35],sun:'Full sun',opt:[15,22],frost:false,wetRisk:true,notes:'Days to harvest vary widely between varieties.'},
+ {id:'rape',name:'Rape (leaf)',fam:'Leafy',method:'either',tray:[4,5],depth:'0.5–1 cm',inrow:'30–45 cm',rows:'45–60 cm',days:[30,45],from:'transplant',harvest:12,water:[25,30],sun:'Full sun',opt:[12,25],frost:false,notes:'Pick outer leaves regularly and it keeps producing for months.'},
+ {id:'chinese',name:'Chinese cabbage',fam:'Leafy',method:'either',tray:[3,4],depth:'0.5–1 cm',inrow:'30–45 cm',rows:'45–60 cm',days:[50,80],from:'sowing',harvest:2,water:[25,30],sun:'Full sun',opt:[13,21],frost:false,notes:'Runs to seed quickly in hot weather.'},
+ {id:'kale',name:'Kale',fam:'Leafy',method:'tray',tray:[4,6],depth:'0.5–1 cm',inrow:'40–45 cm',rows:'60 cm',days:[50,65],from:'transplant',harvest:16,water:[25,30],sun:'Full sun',opt:[12,24],frost:false,notes:'Pick lower leaves first. Crops for a long time.'},
+ {id:'broccoli',name:'Broccoli',fam:'Leafy',method:'tray',tray:[4,6],depth:'0.5–1 cm',inrow:'45 cm',rows:'60 cm',days:[60,90],from:'transplant',harvest:4,water:[25,35],sun:'Full sun',opt:[15,21],frost:false,notes:'After the main head is cut, side shoots keep coming.'},
+ {id:'cauliflower',name:'Cauliflower',fam:'Leafy',method:'tray',tray:[4,6],depth:'0.5–1 cm',inrow:'45–60 cm',rows:'60–75 cm',days:[60,100],from:'transplant',harvest:2,water:[25,35],sun:'Full sun',opt:[15,21],frost:false,notes:'Heat stress causes small or loose heads.'},
+ {id:'lettuce',name:'Lettuce',fam:'Leafy',method:'either',tray:[3,4],depth:'0.3–0.5 cm (needs light to germinate)',inrow:'25–30 cm',rows:'30–40 cm',days:[45,70],from:'sowing',harvest:3,water:[25,30],sun:'Full sun to light shade',opt:[13,21],frost:false,wetRisk:true,notes:'Turns bitter and runs to seed in heat. Light shade helps in hot months.'},
+ {id:'spinach',name:'Spinach (true)',fam:'Leafy',method:'direct',depth:'1–2 cm',inrow:'8–10 cm',rows:'30 cm',days:[40,50],from:'sowing',harvest:4,water:[25,30],sun:'Full sun to light shade',opt:[12,20],frost:false,notes:'Runs to seed quickly in heat.'},
+ {id:'chard',name:'Swiss chard',fam:'Leafy',method:'either',tray:[4,5],depth:'1–2 cm',inrow:'25–30 cm',rows:'45 cm',days:[50,60],from:'sowing',harvest:20,water:[25,30],sun:'Full sun to light shade',opt:[12,26],frost:false,notes:'Often sold as "spinach". Copes with heat better than true spinach.'},
+ {id:'carrot',name:'Carrot',fam:'Root',method:'direct',depth:'0.5–1 cm',inrow:'5–8 cm (after thinning)',rows:'25–30 cm',days:[70,90],from:'sowing',harvest:4,water:[20,25],sun:'Full sun',opt:[15,21],frost:false,notes:'Never transplant. Keep the soil surface moist until seedlings appear.'},
+ {id:'beetroot',name:'Beetroot',fam:'Root',method:'direct',depth:'1.5–2.5 cm',inrow:'8–10 cm (after thinning)',rows:'30 cm',days:[55,70],from:'sowing',harvest:4,water:[20,25],sun:'Full sun',opt:[15,24],frost:false,notes:'Each seed is a cluster, so thin to one plant.'},
+ {id:'onion',name:'Onion (bulb)',fam:'Root',method:'tray',tray:[6,8],depth:'0.5–1 cm',inrow:'8–10 cm',rows:'25–30 cm',days:[90,120],from:'transplant',harvest:3,water:[20,25],sun:'Full sun',opt:[13,22],frost:false,notes:'Use short-day varieties. Long-day types will not form bulbs this close to the equator. Stop watering when the tops fall over.'},
+ {id:'garlic',name:'Garlic',fam:'Root',method:'cloves',depth:'Cloves 2.5–5 cm deep, point up',inrow:'10–15 cm',rows:'25–30 cm',days:[120,180],from:'sowing',harvest:3,water:[20,25],sun:'Full sun',opt:[12,20],frost:false,notes:'Needs a cool spell to form good bulbs, so it belongs in the cool season. Planted from cloves. Stop watering 2–3 weeks before harvest.'},
+ {id:'peas',name:'Peas',fam:'Legume',method:'direct',depth:'2.5–4 cm',inrow:'5–8 cm',rows:'45–60 cm',days:[60,70],from:'sowing',harvest:4,water:[20,25],sun:'Full sun',opt:[13,21],frost:false,notes:'Flowers can be damaged by hard frost even though plants survive.'}
+];
+/* ================= Companion planting =================
+   ev: 'res' = supported by research; 'est' = well established (shared pests or diseases);
+       'trad' = traditional gardening practice with limited scientific evidence. */
+const FAM = {
+  Nightshade:['tomato','pepper','chilli','eggplant','potato'],
+  Cabbage:['cabbage','rape','chinese','kale','broccoli','cauliflower'],
+  Gourd:['cucumber','pumpkin','butternut','watermelon'],
+  Legume:['beans','cowpea','peas'],
+  Onion:['onion','garlic'],
+  Beet:['beetroot','chard','spinach']
+};
+const FAMNAME = {Nightshade:'nightshade family (tomato, peppers, eggplant, potato)', Cabbage:'cabbage family (brassicas)', Gourd:'gourd family (cucurbits)', Legume:'legume family', Onion:'onion family', Beet:'beet family'};
+const famOf = id => Object.keys(FAM).find(k=>FAM[k].includes(id));
+const EV = {res:['res','Research-backed'], est:['est','Well established'], trad:['trad','Traditional practice']};
+const PAIRS = [];
+const pair = (as, bs, kind, why, ev) => as.forEach(a=>bs.forEach(b=>{ if(a!==b) PAIRS.push({a,b,kind,why,ev}); }));
+// Good neighbours
+pair(['sweetcorn'],['beans','cowpea'],'good','Maize–legume intercropping is widely studied in Africa and often gives more total yield from the same land. The legume adds nitrogen, mostly to the soil for the next crop.','res');
+pair(['sweetcorn'],['pumpkin','butternut'],'good','Part of the traditional "three sisters" mix: vines shade the soil and keep weeds down between the maize rows.','trad');
+pair(['sweetcorn'],['sweetpotato'],'good','Sweet potato vines cover the ground between maize rows. A common traditional intercrop.','trad');
+pair(['sweetcorn'],['cucumber'],'good','Cucumber can climb maize stalks, and the maize gives some shade in hot months.','trad');
+pair(['tomato','sweetcorn','okra'],['lettuce','spinach','chinese'],'good','The taller crop gives light shade, which helps heat-sensitive leaves in hot months.','trad');
+pair(['carrot'],['onion','garlic'],'good','Said to confuse pests that find plants by smell. Evidence is limited and mixed.','trad');
+pair(['cabbage','rape','kale','broccoli','cauliflower','chinese'],['onion','garlic'],'good','Said to deter some cabbage pests by smell. Evidence is limited.','trad');
+pair(['beetroot'],['onion','lettuce'],'good','Different root depths and shapes, so they share space well.','trad');
+pair(['lettuce'],['carrot'],'good','Quick lettuce is harvested before slow carrots need the space.','trad');
+pair(['beans','cowpea','peas'],['cabbage','kale','rape','broccoli','cauliflower','sweetcorn'],'good','Legumes fix nitrogen. Most of the benefit goes to the following crop when the legume roots and residue break down.','res');
+// Keep apart
+FAM.Nightshade.forEach((a,i)=>FAM.Nightshade.slice(i+1).forEach(b=>{ PAIRS.push({a,b,kind:'avoid',why:'Same family. They share diseases such as bacterial wilt and blight, and root-knot nematodes. Do not grow them in the same bed one after another; rotate with another family.',ev:'est'}); }));
+pair(['potato'],['tomato'],'avoid','Late blight spreads between potato and tomato. Keep them well apart.','est');
+FAM.Cabbage.forEach((a,i)=>FAM.Cabbage.slice(i+1).forEach(b=>{ PAIRS.push({a,b,kind:'avoid',why:'Same family. They share pests such as diamondback moth and aphids. Fine side by side, but rotate beds so the family does not follow itself.',ev:'est'}); }));
+FAM.Gourd.forEach((a,i)=>FAM.Gourd.slice(i+1).forEach(b=>{ PAIRS.push({a,b,kind:'avoid',why:'Same family. They share pests and diseases such as powdery mildew and fruit flies. Rotate beds between seasons.',ev:'est'}); }));
+pair(['sweetcorn'],['tomato'],'avoid','African bollworm attacks both maize cobs and tomato fruit, so growing them together can build up the pest.','est');
+pair(['beans','peas','cowpea'],['onion','garlic'],'avoid','Gardeners commonly say onions and garlic stunt beans and peas. Evidence is weak.','trad');
+function companions(id){
+  const good=[], avoid=[];
+  PAIRS.forEach(p=>{ const o = p.a===id ? p.b : p.b===id ? p.a : null; if(!o) return; (p.kind==='good'?good:avoid).push({id:o, why:p.why, ev:p.ev}); });
+  const dedupe = l => { const m=new Map(); l.forEach(x=>{ const e=m.get(x.id); if(!e) m.set(x.id,{...x}); else if(!e.why.includes(x.why)) e.why += ' ' + x.why; }); return [...m.values()]; };
+  return {good:dedupe(good), avoid:dedupe(avoid)};
+}
+
+const METHOD = {direct:'Sow directly in the ground', tray:'Start in seed trays, then transplant', either:'Either: direct sow or seed trays', cuttings:'Plant vine cuttings', tubers:'Plant seed tubers', cloves:'Plant cloves directly'};
+
+/* ================= Storage ================= */
+const KEY = 'veg-planting-guide.v1';
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function fresh(){ return {v:2, upd:0, station:'kafue', region:'IIa', climate:JSON.parse(JSON.stringify(STATIONS.kafue)), picked:[], plantings:[], rain:{}}; }
+function normalize(s){
+  const f=fresh(); const o=Object.assign(f, s||{}, {climate:(s&&s.climate&&s.climate.min)?s.climate:f.climate});
+  // Version 2: Kafue becomes the default location (requested). Only switch if Lusaka's preset was untouched.
+  if((o.v||1) < 2){ if(o.station==='lusaka'){ o.station='kafue'; o.climate=JSON.parse(JSON.stringify(STATIONS.kafue)); } o.v=2; }
+  return o;
+}
+function loadLocal(){ try{ const r=localStorage.getItem(KEY); if(r) return normalize(JSON.parse(r)); }catch(e){} return fresh(); }
+let S = loadLocal();
+function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ S.upd = Date.now(); saveLocal(); }
+
+/* Backup: the app saves in this browser only, so export/import moves data between devices. */
+function exportData(){
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'planting-guide-backup-'+iso(new Date())+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  toast('Backup file saved');
+}
+function importData(file){
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try{ d = JSON.parse(r.result); }catch(e){ toast('That file is not a planting guide backup.'); return; }
+    if(!d || typeof d!=='object' || !Array.isArray(d.plantings) || typeof d.rain!=='object'){ toast('That file is not a planting guide backup.'); return; }
+    if(!confirm('Replace everything saved in this browser with the backup? ('+d.plantings.length+' plantings, '+Object.keys(d.rain||{}).length+' rain readings)')) return;
+    S = normalize(d); save(); render(); toast('Backup restored');
+  };
+  r.readAsText(file);
+}
+function cloudLine(){
+  return `<div class="info" style="margin-top:14px"><strong>Your data.</strong> Saved in this browser on this device only. Save a backup file now and then, and use it to move your garden to another phone or computer.
+  <div class="row" style="margin-top:10px"><button class="chip" data-export>Save backup file</button><button class="chip" data-import>Restore from backup</button></div>
+  <input type="file" id="importFile" accept="application/json,.json" hidden></div>`;
+}
+
+/* ================= Helpers ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const iso = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseISO = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d,12); };
+const addDays = (d,n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const fmt = d => d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+const cropById = id => CROPS.find(c=>c.id===id);
+let toastT;
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+const mean = i => (S.climate.min[i] + S.climate.max[i]) / 2;
+
+/* ================= Planting logic =================
+   For a sowing date, work out which months the crop spends in the ground and
+   compare each month's average temperature with the crop's preferred range. */
+function timeline(c, sowDate){
+  const trayDays = (c.method==='tray' || c.method==='either') && c.tray ? Math.round((c.tray[0]+c.tray[1])/2*7) : 0;
+  const useTray = c.method==='tray' || (c.method==='either' && c.from==='transplant');
+  const fieldStart = useTray ? addDays(sowDate, trayDays) : sowDate;
+  const base = c.from==='transplant' ? fieldStart : sowDate;
+  const h1 = addDays(base, c.days[0]), h2 = addDays(base, c.days[1]);
+  const hEnd = addDays(h1, (c.harvest||2)*7);
+  return {transplant: useTray ? fieldStart : null, fieldStart, h1, h2, hEnd};
+}
+function monthsBetween(a, b){ const out=[]; const d=new Date(a.getFullYear(), a.getMonth(), 15); while(d<=b || (d.getMonth()===b.getMonth() && d.getFullYear()===b.getFullYear())){ out.push(d.getMonth()); d.setMonth(d.getMonth()+1); if(out.length>14) break; } return out; }
+function assess(c, sowDate){
+  const t = timeline(c, sowDate);
+  const months = monthsBetween(t.fieldStart, t.h2);
+  let score = 0; const cold=[], hot=[], frost=[];
+  months.forEach(m=>{
+    const tm = mean(m);
+    if(tm >= c.opt[0] && tm <= c.opt[1]) score += 1;
+    else if(tm >= c.opt[0]-2 && tm <= c.opt[1]+2) score += 0.5;
+    if(tm < c.opt[0]) cold.push(m);
+    if(tm > c.opt[1]) hot.push(m);
+    if(c.frost && S.climate.min[m] <= 9) frost.push(m);
+  });
+  const trayCold = [];
+  if(t.transplant){ monthsBetween(sowDate, t.transplant).forEach(m=>{ if(mean(m) < c.opt[0]) trayCold.push(m); }); }
+  const ratio = months.length ? score/months.length : 0;
+  let verdict = ratio >= 0.85 ? 'good' : ratio >= 0.6 ? 'ok' : 'no';
+  if(c.frost && frost.length && verdict==='good') verdict = 'ok';
+  const startRain = S.climate.rain[t.fieldStart.getMonth()];
+  return {t, months, verdict, cold, hot, frost, trayCold, wet: !!c.wetRisk && months.some(m=>S.climate.rain[m]>=100), irrigate: startRain < 50};
+}
+const sowDateFor = (m, year) => new Date(year, m, 15, 12);
+function monthVerdict(c, m){ return assess(c, sowDateFor(m, new Date().getFullYear())).verdict; }
+const VERD = {good:['good','Good time'], ok:['ok','Possible'], no:['no','Not ideal']};
+const list = ms => [...new Set(ms)].map(m=>MON[m]).join(', ');
+
+/* ================= Views ================= */
+let tab = 'plan';
+let selMonth = new Date().getMonth();
+let filter = 'all';
+
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current', b.dataset.tab===tab?'page':'false'));
+  $('#sub').textContent = `${STATIONS[S.station]?.name.split(' (')[0] || 'Custom'} climate${S.region?', Region '+S.region:''}`;
+  const v = $('#view');
+  v.innerHTML = tab==='plan' ? viewPlan() : tab==='garden' ? viewGarden() : tab==='rain' ? viewRain() : viewClimate();
+}
+
+function monthStrip(){
+  const maxR = Math.max(...S.climate.rain, 1);
+  return `<div class="months" role="group" aria-label="Choose a sowing month">${MON.map((m,i)=>`<button data-month="${i}" aria-pressed="${i===selMonth}"><span>${m}</span><span class="r" style="height:${Math.max(2, Math.round(S.climate.rain[i]/maxR*14))}px" title="${S.climate.rain[i]} mm average rain"></span></button>`).join('')}</div>
+  <p class="muted small" style="margin-top:6px">Blue bars show average monthly rain.</p>`;
+}
+
+function cropRow(c){
+  const v = VERD[monthVerdict(c, selMonth)];
+  const picked = S.picked.includes(c.id);
+  return `<div class="crop"><button class="pick" data-pick="${c.id}" aria-pressed="${picked}" aria-label="${picked?'Remove':'Add'} ${esc(c.name)} ${picked?'from':'to'} my selection">${picked?'✓':'+'}</button>
+    <button class="name" data-crop="${c.id}"><b>${esc(c.name)}</b><span>${esc(METHOD[c.method])}</span></button>
+    <span class="tag ${v[0]}">${v[1]}</span></div>`;
+}
+
+function viewPlan(){
+  const groups = {good:[], ok:[], no:[]};
+  let crops = CROPS;
+  if(filter==='picked') crops = CROPS.filter(c=>S.picked.includes(c.id));
+  crops.forEach(c=>groups[monthVerdict(c, selMonth)].push(c));
+  const tm = mean(selMonth);
+  let h = `<h2>Sowing in ${MONTHS[selMonth]}</h2>${monthStrip()}
+    <p class="small">${MONTHS[selMonth]} averages ${S.climate.min[selMonth]}–${S.climate.max[selMonth]} °C (mean ${tm.toFixed(1)} °C) and ${S.climate.rain[selMonth]} mm of rain.</p>
+    <div class="row" style="margin-top:4px"><button class="chip" data-filter="all" aria-pressed="${filter==='all'}">All vegetables</button><button class="chip" data-filter="picked" aria-pressed="${filter==='picked'}">My selection (${S.picked.length})</button></div>`;
+  if(filter==='picked' && !S.picked.length) h += `<div class="info">Tap + next to any vegetable to add it to your selection.</div>`;
+  [['good','Good time to sow'],['ok','Possible, with care'],['no','Not ideal this month']].forEach(([k,lab])=>{
+    if(!groups[k].length) return;
+    h += `<div class="group-h"><h3>${lab}</h3><span class="muted small">${groups[k].length}</span></div>` + groups[k].map(cropRow).join('');
+  });
+  if(S.picked.length && filter==='picked'){
+    h += `<h2>Growing guide for your selection</h2>` + S.picked.map(id=>cropById(id)).filter(Boolean).map(c=>guideCard(c,false)).join('');
+  }
+  h += `<div class="info"><strong>How "good time" is worked out.</strong> The app takes the months the crop would be in the ground if sown mid-${MONTHS[selMonth]}, and compares each month's average temperature with the range the crop prefers. Spacing, depth and days to harvest are typical figures; the seed packet for your variety takes priority.</div>`;
+  return h;
+}
+
+function calendarFor(c){
+  return `<div class="cal">${MON.map((m,i)=>{ const v=monthVerdict(c,i); return `<span class="${v==='good'?'good':v==='ok'?'ok':''}${i===selMonth?' cur':''}">${m}</span>`; }).join('')}</div>
+  <div class="legend"><span><i style="background:var(--leaf)"></i>Good time to sow</span><span><i style="background:var(--leaf-soft)"></i>Possible</span></div>`;
+}
+
+function guideCard(c, full){
+  const a = assess(c, sowDateFor(selMonth, new Date().getFullYear()));
+  const v = VERD[a.verdict];
+  const tray = c.tray ? `${c.tray[0]}–${c.tray[1]} weeks` : '—';
+  let warn = '';
+  if(a.frost.length) warn += `<div class="warn frost">Frost-tender. In the ground during ${list(a.frost)}, when nights average ${Math.min(...a.frost.map(m=>S.climate.min[m]))} °C or lower. Low-lying spots can get frost; cover plants on cold, calm nights.</div>`;
+  if(a.hot.length) warn += `<div class="warn">Warmer than it likes in ${list(a.hot)}. ${c.fam==='Leafy'?'Expect bolting (running to seed) or poor heads.':'Growth and yield may suffer.'}</div>`;
+  if(a.cold.length && !a.frost.length) warn += `<div class="warn">Cooler than it likes in ${list(a.cold)}, so growth will be slower and harvest later than the dates shown.</div>`;
+  if(a.trayCold.length) warn += `<div class="warn frost">Seedlings will be in trays during ${list(a.trayCold)}. Keep trays in a warm, sheltered spot and bring them in on cold nights.</div>`;
+  if(a.wet) warn += `<div class="warn">Some of its time in the ground falls in the wet months. Wet, humid weather raises the risk of leaf and fruit diseases; good spacing and airflow help.</div>`;
+  if(a.irrigate) warn += `<div class="warn">Little rain at planting time on average. Plan to irrigate.</div>`;
+  return `<div class="guide"><div class="gh"><h3>${esc(c.name)}</h3><span class="tag ${v[0]}">${v[1]} in ${MON[selMonth]}</span></div>
+    <span class="method">${esc(METHOD[c.method])}</span>
+    <dl class="facts">
+      <div><dt>Sowing depth</dt><dd>${esc(c.depth)}</dd></div>
+      <div><dt>Weeks in seed tray</dt><dd>${(c.method==='tray'||c.method==='either')?tray:'Not needed'}</dd></div>
+      <div><dt>Spacing in the row</dt><dd>${esc(c.inrow)}</dd></div>
+      <div><dt>Between rows</dt><dd>${esc(c.rows)}</dd></div>
+      <div><dt>Water</dt><dd>About ${c.water[0]}–${c.water[1]} mm a week</dd></div>
+      <div><dt>Days to first harvest</dt><dd>${c.days[0]}–${c.days[1]} from ${c.from==='transplant'?'transplanting':'sowing'}</dd></div>
+      <div><dt>Sun</dt><dd>${esc(c.sun)}</dd></div>
+      <div><dt>Prefers (average temp)</dt><dd>${c.opt[0]}–${c.opt[1]} °C${c.frost?', frost-tender':''}</dd></div>
+    </dl>
+    <p class="note">${esc(c.notes)} ${c.water[0]} mm a week is ${c.water[0]} litres per square metre.</p>
+    ${full ? `<h3>Sowing calendar for your climate</h3>${calendarFor(c)}` : ''}
+    ${companionBlock(c, full)}
+    ${warn}
+    ${full ? '' : `<div class="btns" style="margin-top:12px"><button class="btn ghost" data-crop="${c.id}">Plant this</button></div>`}
+  </div>`;
+}
+
+function companionBlock(c, full){
+  const {good, avoid} = companions(c.id);
+  const item = (x,cls) => `<div class="cp ${cls}"><b>${esc(cropById(x.id)?.name||x.id)}</b><span class="ev ${EV[x.ev][0]}">${EV[x.ev][1]}</span>${full?`<br>${esc(x.why)}`:''}</div>`;
+  const fam = famOf(c.id);
+  if(!good.length && !avoid.length && !fam) return '';
+  return `<div class="comp"><h3>Companion planting</h3>
+    ${good.length?`<h4>Good neighbours</h4>${good.map(x=>item(x,'')).join('')}`:''}
+    ${avoid.length?`<h4>Keep apart or rotate</h4>${avoid.map(x=>item(x,'avoid')).join('')}`:''}
+    ${fam?`<p class="note">Part of the ${FAMNAME[fam]}. Avoid planting this family in the same bed season after season.</p>`:''}
+    ${full?'':'<p class="note">Open the vegetable for the reasons behind each pairing.</p>'}</div>`;
+}
+
+function cropSheet(id){
+  const c = cropById(id);
+  const picked = S.picked.includes(id);
+  const today = new Date();
+  openSheet(`<div class="panel-head"><h2>${esc(c.name)}</h2><button class="x" data-close aria-label="Close">✕</button></div>
+    ${guideCard(c,true)}
+    <h3>Add a planting</h3>
+    <label class="f" for="pDate">Sowing date</label><input type="date" id="pDate" value="${iso(today)}">
+    <label class="f" for="pNote">Where or how much (optional)</label><input type="text" id="pNote" placeholder="e.g. Bed 3, two rows">
+    ${c.method==='either'?`<label class="f">Method</label><div class="row"><button class="chip" data-pm="direct" aria-pressed="true">Direct</button><button class="chip" data-pm="tray" aria-pressed="false">Seed tray</button></div>`:''}
+    <div id="preview"></div>
+    <div class="btns"><button class="btn" data-addplant="${c.id}">Add to my garden</button>
+    <button class="btn ghost" data-pick="${c.id}" aria-pressed="${picked}">${picked?'Remove from my selection':'Add to my selection'}</button></div>`);
+  pm = 'direct';
+  updatePreview(c);
+}
+let pm = 'direct';
+function cropWithMethod(c, method){
+  if(c.method!=='either') return c;
+  if(method==='tray') return {...c, method:'tray', from:'transplant', days: c.from==='transplant'?c.days:[Math.max(10,c.days[0]-Math.round(c.tray[0]*7*0.6)), Math.max(15,c.days[1]-Math.round(c.tray[1]*7*0.6))]};
+  return {...c, method:'direct', from:'sowing', days: c.from==='sowing'?c.days:[c.days[0]+Math.round(c.tray[0]*7*0.6), c.days[1]+Math.round(c.tray[1]*7*0.6)]};
+}
+function updatePreview(c){
+  const el = $('#preview'); if(!el) return;
+  const val = $('#pDate').value; if(!val){ el.innerHTML=''; return; }
+  const cc = cropWithMethod(c, pm);
+  const a = assess(cc, parseISO(val));
+  el.innerHTML = `<div class="guide" style="margin-top:12px"><dl class="timeline">
+    ${a.t.transplant?`<dt>Transplant</dt><dd>about ${fmt(a.t.transplant)}</dd>`:''}
+    <dt>First harvest</dt><dd>${fmt(a.t.h1)} – ${fmt(a.t.h2)}</dd>
+    <dt>Verdict</dt><dd>${VERD[a.verdict][1]} for this date</dd></dl>
+    ${c.method==='either'?`<p class="note">${pm==='tray'?'Tray seedlings usually reach harvest sooner after transplanting. These dates are estimates.':'Direct sowing takes longer to reach harvest than transplanted seedlings.'}</p>`:''}</div>`;
+}
+
+function viewGarden(){
+  const ps = [...S.plantings].sort((a,b)=>(a.done?1:0)-(b.done?1:0) || a.sow.localeCompare(b.sow));
+  let h = `<h2>My garden</h2>`;
+  if(!ps.length) return h + `<div class="info">Nothing planted yet. Open any vegetable on "What to plant" and tap "Add to my garden" to track transplant and harvest dates.</div>` + needsCard() + cloudLine();
+  const today = new Date();
+  ps.forEach(p=>{
+    const c0 = cropById(p.crop); if(!c0) return;
+    const c = cropWithMethod(c0, p.method||'direct');
+    const a = assess(c, parseISO(p.sow));
+    let status;
+    if(p.done) status = 'Finished';
+    else if(a.t.transplant && today < a.t.transplant) status = `In tray, transplant in ${Math.ceil((a.t.transplant-today)/864e5)} days`;
+    else if(today < a.t.h1) status = `Harvest in about ${Math.ceil((a.t.h1-today)/864e5)} days`;
+    else if(today <= a.t.hEnd) status = 'Harvest time';
+    else status = 'Past usual harvest window';
+    let w = '';
+    if(!p.done && a.frost.length) w += `<div class="warn frost">Frost-tender and in the ground during ${list(a.frost)}. Cover on cold, calm nights.</div>`;
+    if(!p.done && a.hot.length && c.fam==='Leafy') w += `<div class="warn">Hot months ahead (${list(a.hot)}): watch for bolting.</div>`;
+    h += `<div class="plant${p.done?' done':''}"><div class="ph"><strong>${esc(c0.name)}</strong><span class="small muted">${esc(status)}</span></div>
+      ${p.note?`<div class="small muted">${esc(p.note)}</div>`:''}
+      <dl class="timeline"><dt>Sown</dt><dd>${fmt(parseISO(p.sow))}${c0.method==='either'?` (${p.method==='tray'?'seed tray':'direct'})`:''}</dd>
+      ${a.t.transplant?`<dt>Transplant</dt><dd>about ${fmt(a.t.transplant)}</dd>`:''}
+      <dt>First harvest</dt><dd>${fmt(a.t.h1)} – ${fmt(a.t.h2)}</dd>
+      <dt>Water</dt><dd>${c0.water[0]}–${c0.water[1]} mm a week</dd></dl>${w}
+      <div class="acts"><button class="chip" data-done="${p.id}">${p.done?'Mark as growing':'Mark as finished'}</button><button class="chip" data-crop="${c0.id}">Growing guide</button><button class="chip" data-delplant="${p.id}">Delete</button></div></div>`;
+  });
+  return h + neighbourCheck() + needsCard() + cloudLine();
+}
+function neighbourCheck(){
+  const ids = [...new Set(S.plantings.filter(p=>!p.done).map(p=>p.crop))];
+  if(ids.length < 2) return '';
+  const hits = PAIRS.filter(p=>ids.includes(p.a) && ids.includes(p.b));
+  const seen = new Map(); hits.forEach(p=>{ const k=[p.a,p.b].sort().join('|')+p.kind; const e=seen.get(k); if(!e) seen.set(k,{...p}); else if(!e.why.includes(p.why)) e.why += ' ' + p.why; }); const uniq=[...seen.values()];
+  const avoid = uniq.filter(p=>p.kind==='avoid'), good = uniq.filter(p=>p.kind==='good');
+  if(!uniq.length) return '';
+  const row = (p,cls)=>`<div class="cp ${cls}"><b>${esc(cropById(p.a).name)} + ${esc(cropById(p.b).name)}</b><span class="ev ${EV[p.ev][0]}">${EV[p.ev][1]}</span><br>${esc(p.why)}</div>`;
+  return `<h2>Neighbour check</h2><div class="guide">
+    ${avoid.length?`<h4 style="margin:0 0 6px">Keep apart or rotate</h4>${avoid.map(p=>row(p,'avoid')).join('')}`:''}
+    ${good.length?`<h4 style="margin:10px 0 6px">Good together</h4>${good.map(p=>row(p,'')).join('')}`:''}
+    <p class="note">Based on what is currently growing in My garden.</p></div>`;
+}
+
+/* ================= Rain ================= */
+function rainSum(fromDate, toDate){ let s=0; for(const [d,mm] of Object.entries(S.rain)){ const x=parseISO(d); if(x>=fromDate && x<=toDate) s+= +mm; } return Math.round(s*10)/10; }
+function activePlantings(){
+  const today = new Date();
+  return S.plantings.filter(p=>!p.done).map(p=>{ const c=cropById(p.crop); if(!c) return null; const a=assess(cropWithMethod(c,p.method||'direct'), parseISO(p.sow)); return (today>=a.t.fieldStart && today<=a.t.hEnd) ? c : null; }).filter(Boolean);
+}
+function needsCard(){
+  const act = activePlantings();
+  if(!act.length) return '';
+  const today = new Date(); today.setHours(23,59);
+  const wk = rainSum(addDays(today,-6), today);
+  const need = Math.max(...act.map(c=>c.water[0])), needHi = Math.max(...act.map(c=>c.water[1]));
+  const gap = Math.max(0, need - wk);
+  return `<h2>Water this week</h2><div class="guide">
+    <p>Rain in the last 7 days: <strong>${wk} mm</strong>. Crops in the ground need roughly <strong>${need}–${needHi} mm</strong> a week.</p>
+    ${gap>0?`<p>Top up about <strong>${Math.round(gap)} mm</strong>, which is about <strong>${Math.round(gap)} litres per square metre</strong>, split over 2–3 waterings.</p>`:`<p>Rain has covered the basic need this week. Check the soil a finger's depth down before watering.</p>`}
+    <p class="note">Only counts rain logged in the Rainfall tab. Hot, windy days in September–November use more water than these typical figures.</p></div>`;
+}
+function rainChart(){
+  const now = new Date(); const ym = (y,m)=>{ let s=0; for(const [d,mm] of Object.entries(S.rain)){ const x=parseISO(d); if(x.getFullYear()===y && x.getMonth()===m) s+=+mm; } return s; };
+  const keys = Array.from({length:12},(_,i)=>{ const d=new Date(now.getFullYear(), now.getMonth()-11+i, 1); return [d.getFullYear(), d.getMonth()]; });
+  const vals = keys.map(([y,m])=>ym(y,m)), avgs = keys.map(([,m])=>S.climate.rain[m]);
+  const max = Math.max(...vals, ...avgs, 10);
+  const W=340,H=170,P=28,bw=(W-P-6)/12;
+  let g='';
+  [0, Math.round(max/2), Math.round(max)].forEach(v=>{ const y=10+(1-v/max)*(H-34); g+=`<line x1="${P}" x2="${W-4}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${P-4}" y="${y+4}" font-size="10" text-anchor="end" fill="var(--muted)">${v}</text>`; });
+  keys.forEach(([,m],i)=>{
+    const x=P+i*bw, h=(vals[i]/max)*(H-34), ah=(avgs[i]/max)*(H-34);
+    g+=`<rect x="${x+bw*0.18}" y="${10+(H-34)-h}" width="${bw*0.64}" height="${h}" rx="2" fill="var(--rain)"/>`;
+    g+=`<line x1="${x+bw*0.08}" x2="${x+bw*0.92}" y1="${10+(H-34)-ah}" y2="${10+(H-34)-ah}" stroke="var(--amber)" stroke-width="2.5"/>`;
+    g+=`<text x="${x+bw/2}" y="${H-8}" font-size="9.5" text-anchor="middle" fill="var(--muted)">${MON[m][0]}</text>`;
+  });
+  return `<div class="chartbox"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:300px" role="img" aria-label="Rain logged per month for the last 12 months, against long-term average">${g}</svg>
+    <div class="legend"><span><i style="background:var(--rain)"></i>Your logged rain (mm)</span><span><i style="background:var(--amber);height:3px"></i>Long-term average</span></div></div>`;
+}
+function viewRain(){
+  const today = new Date(); today.setHours(23,59);
+  const wk = rainSum(addDays(today,-6), today);
+  const mStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const mo = rainSum(mStart, today);
+  const sYear = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear()-1;
+  const season = rainSum(new Date(sYear,6,1), today);
+  const entries = Object.entries(S.rain).sort((a,b)=>b[0].localeCompare(a[0]));
+  return `<h2>Rainfall</h2>
+  <div class="row"><div><label class="f" for="rDate">Date</label><input type="date" id="rDate" value="${iso(new Date())}"></div>
+  <div><label class="f" for="rMM">Rain (mm)</label><input type="number" id="rMM" inputmode="decimal" min="0" step="0.5" placeholder="0"></div></div>
+  <div class="btns" style="margin-top:10px"><button class="btn rain" data-addrain>Save rain reading</button></div>
+  <div class="stats"><div class="stat"><b>${wk}</b><span>mm last 7 days</span></div>
+  <div class="stat"><b>${mo}</b><span>mm in ${MONTHS[today.getMonth()]} (average ${S.climate.rain[today.getMonth()]})</span></div>
+  <div class="stat"><b>${season}</b><span>mm since 1 July ${sYear}</span></div></div>
+  ${rainChart()}
+  ${needsCard()}
+  <h3>Readings</h3>
+  ${entries.length ? `<div class="rainlist">${entries.slice(0,60).map(([d,mm])=>`<div class="rainrow"><span>${fmt(parseISO(d))}</span><span><strong>${mm} mm</strong><button data-delrain="${d}" aria-label="Delete reading for ${d}">✕</button></span></div>`).join('')}</div>` : `<p class="muted">No readings yet. Log your rain gauge reading each morning after rain. Saving the same date again replaces that day's reading.</p>`}
+  <p class="muted small">Season total runs from 1 July, so the whole rainy season counts as one season. Averages come from the climate station chosen on the Climate tab.</p>
+  ${cloudLine()}`;
+}
+
+/* ================= Climate ================= */
+function viewClimate(){
+  const c = S.climate;
+  const row = (lab,key)=>`<tr><th>${lab}</th>${MON.map((m,i)=>`<td><input type="number" step="0.1" inputmode="decimal" data-cl="${key}|${i}" value="${c[key][i]}" aria-label="${lab} ${m}"></td>`).join('')}</tr>`;
+  return `<h2>Your climate</h2>
+  <label class="f" for="station">Nearest weather station</label>
+  <select id="station">${Object.entries(STATIONS).map(([k,s])=>`<option value="${k}"${S.station===k?' selected':''}>${esc(s.name)}</option>`).join('')}<option value="custom"${S.station==='custom'?' selected':''}>My own figures</option></select>
+  <p class="small muted" style="margin-top:6px">Kafue is set as the closest location to Shimabala. Its figures are modelled averages, and published sources for Kafue differ by about 1–3 °C, so they are approximate. Lusaka's figures come from a 1991–2020 station record, if you want to compare. Low-lying ground on the farm can have colder nights than these averages.</p>
+  <label class="f" for="region">Agro-ecological region</label>
+  <select id="region">${Object.entries(REGIONS).map(([k,v])=>`<option value="${k}"${S.region===k?' selected':''}>${esc(v)}</option>`).join('')}</select>
+  <p class="small muted" style="margin-top:6px">Published descriptions place Lusaka Province's plateau in Region IIa. The region is shown for reference; the planting advice is driven by the monthly figures below.</p>
+  <h3>Monthly averages</h3>
+  <div class="tblwrap"><table class="clim"><thead><tr><th></th>${MON.map(m=>`<th>${m}</th>`).join('')}</tr></thead><tbody>
+  ${row('Low °C','min')}${row('High °C','max')}${row('Rain mm','rain')}</tbody></table></div>
+  <p class="small muted" style="margin-top:8px">Edit any figure if you have your own records. Changing a figure switches to "My own figures".</p>
+  <div class="info"><strong>Sources.</strong> Kafue averages are modelled figures from nomadseason.com. The other stations are from climatestotravel.com's Zambia page (Lusaka: 1991–2020 table). Region descriptions follow published research on Zambia's agro-ecological regions. Crop figures are typical horticultural values, not specific to one variety. Companion pairings are labelled by strength of evidence: research-backed, well established (shared pests or diseases), or traditional practice with limited evidence.</div>
+  ${cloudLine()}`;
+}
+
+/* ================= Sheet ================= */
+function openSheet(html){ $('#panel').innerHTML=html; $('#sheet').hidden=false; document.body.style.overflow='hidden'; $('#panel').scrollTop=0; }
+function closeSheet(){ $('#sheet').hidden=true; document.body.style.overflow=''; }
+
+/* ================= Events ================= */
+document.addEventListener('click', ev=>{
+  const b = ev.target.closest('button'); if(!b) return;
+  const d = b.dataset;
+  if(d.export!==undefined){ exportData(); return; }
+  if(d.import!==undefined){ $('#importFile').click(); return; }
+  if(d.tab){ tab=d.tab; render(); window.scrollTo(0,0); return; }
+  if(d.close!==undefined){ closeSheet(); return; }
+  if(d.month){ selMonth=+d.month; render(); return; }
+  if(d.filter){ filter=d.filter; render(); return; }
+  if(d.pick){ S.picked = S.picked.includes(d.pick) ? S.picked.filter(x=>x!==d.pick) : [...S.picked, d.pick]; save();
+    if(!$('#sheet').hidden){ const on=S.picked.includes(d.pick); b.setAttribute('aria-pressed',on); b.textContent=on?'Remove from my selection':'Add to my selection'; }
+    render(); return; }
+  if(d.crop){ cropSheet(d.crop); return; }
+  if(d.pm){ pm=d.pm; document.querySelectorAll('[data-pm]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.pm===pm)); updatePreview(cropById($('[data-addplant]').dataset.addplant)); return; }
+  if(d.addplant){ const v=$('#pDate').value; if(!v){ toast('Choose a sowing date first.'); return; }
+    S.plantings.push({id:uid(), crop:d.addplant, sow:v, method: cropById(d.addplant).method==='either'?pm:cropById(d.addplant).method, note:$('#pNote').value.trim(), done:false});
+    if(!S.picked.includes(d.addplant)) S.picked.push(d.addplant);
+    save(); closeSheet(); tab='garden'; render(); window.scrollTo(0,0); toast('Added to my garden'); return; }
+  if(d.done){ const p=S.plantings.find(x=>x.id===d.done); if(p){ p.done=!p.done; save(); render(); } return; }
+  if(d.delplant){ if(confirm('Delete this planting?')){ S.plantings=S.plantings.filter(x=>x.id!==d.delplant); save(); render(); } return; }
+  if(d.addrain!==undefined){ const dt=$('#rDate').value, mm=parseFloat($('#rMM').value);
+    if(!dt || isNaN(mm) || mm<0){ toast('Enter a date and a rain amount in mm.'); return; }
+    S.rain[dt]=Math.round(mm*10)/10; save(); render(); toast('Rain reading saved'); return; }
+  if(d.delrain){ if(confirm('Delete this reading?')){ delete S.rain[d.delrain]; save(); render(); } return; }
+});
+document.addEventListener('change', ev=>{
+  const t = ev.target;
+  if(t.id==='importFile'){ if(t.files[0]) importData(t.files[0]); t.value=''; return; }
+  if(t.id==='station'){ S.station=t.value; if(STATIONS[t.value]) S.climate=JSON.parse(JSON.stringify(STATIONS[t.value])); save(); render(); return; }
+  if(t.id==='region'){ S.region=t.value; save(); render(); return; }
+  if(t.dataset.cl){ const [k,i]=t.dataset.cl.split('|'); const v=parseFloat(t.value); if(!isNaN(v)){ S.climate[k][+i]=v; S.station='custom'; save(); render(); } return; }
+  if(t.id==='pDate'){ const c=cropById($('[data-addplant]')?.dataset.addplant); if(c) updatePreview(c); }
+});
+document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !$('#sheet').hidden) closeSheet(); });
+$('#sheet').addEventListener('click', ev=>{ if(ev.target.id==='sheet') closeSheet(); });
+
+render();
+</script>
+</body>
+</html>
