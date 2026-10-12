@@ -131,6 +131,11 @@ input[type=text],input[type=number],input[type=date],select,textarea{width:100%;
 .rainrow button{border:0;background:none;color:var(--muted);min-height:40px;padding:0 8px}
 .chartbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;margin-top:10px;overflow-x:auto}
 
+/* Pest guide */
+details.pest summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;list-style:none;min-height:32px}
+details.pest summary::-webkit-details-marker{display:none}
+details.pest h4{margin:12px 0 4px}
+details.pest p{margin:0}
 /* Climate table */
 table.clim{width:100%;border-collapse:collapse;font-size:.9rem}
 table.clim th,table.clim td{padding:4px 3px;text-align:center;border-bottom:1px solid var(--line)}
@@ -165,6 +170,7 @@ nav.tabs button[aria-current="page"]{color:var(--leaf);font-weight:700;box-shado
   <button data-tab="plan">What to plant</button>
   <button data-tab="garden">My garden</button>
   <button data-tab="rain">Rainfall</button>
+  <button data-tab="pests">Pests</button>
   <button data-tab="climate">Climate</button>
 </div></nav>
 <div class="sheet" id="sheet" hidden><div class="panel" role="dialog" aria-modal="true" id="panel"></div></div>
@@ -397,7 +403,7 @@ function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current', b.dataset.tab===tab?'page':'false'));
   $('#sub').textContent = `${STATIONS[S.station]?.name.split(' (')[0] || 'Custom'} climate${S.region?', Region '+S.region:''}`;
   const v = $('#view');
-  v.innerHTML = tab==='plan' ? viewPlan() : tab==='garden' ? viewGarden() : tab==='rain' ? viewRain() : viewClimate();
+  v.innerHTML = tab==='plan' ? viewPlan() : tab==='garden' ? viewGarden() : tab==='rain' ? viewRain() : tab==='pests' ? viewPests() : viewClimate();
 }
 
 function monthStrip(){
@@ -684,6 +690,164 @@ function viewClimate(){
   ${cloudLine()}`;
 }
 
+/* ================= Pest and disease guide =================
+   Symptom guide for common problems on these crops. General horticultural guidance, not a diagnosis.
+   crops: crop ids, '@Family' (a FAM key) or 'all'. parts: leaf, fruit, root, wilt, seedling. */
+const PESTS = [
+  {n:'Aphids', k:'pest', crops:['all'], parts:['leaf','seedling'],
+   see:'Clusters of small, soft insects (green, grey, black or pink) under leaves and on new shoots. Leaves curl or pucker, and may be sticky with black sooty mould. On cabbage-family crops they are grey and waxy.',
+   check:'Turn leaves over and look at the youngest growth. Ants running up and down the stems often point to aphids.',
+   act:'Check weekly. Knock them off with a strong spray of water or rub them off by hand. Ladybirds and lacewing larvae eat them, so avoid broad-spectrum sprays that kill these. Too much nitrogen fertiliser makes soft growth that aphids like. For heavy attacks use a product registered for the crop and follow the label. Aphids also spread virus diseases.'},
+  {n:'Diamondback moth', k:'pest', crops:['@Cabbage'], parts:['leaf'],
+   see:'Small holes and see-through "windows" in leaves. Pale green caterpillars up to about 1 cm long that wriggle hard and drop on a silk thread when touched.',
+   check:'Look under the leaves and in the heart of the plant. Damage is usually worst in the hot, dry months.',
+   act:'Pick off caterpillars on small plantings. Products based on Bt (Bacillus thuringiensis) target caterpillars and spare most beneficial insects. This pest becomes resistant to insecticides quickly, so never repeat the same product group spray after spray. Rain and overhead watering knock numbers down.'},
+  {n:'Cutworms', k:'pest', crops:['all'], parts:['seedling','root'],
+   see:'Young plants or transplants cut off at soil level overnight, with the top lying beside the stump.',
+   check:'Dig gently around the stem in the morning. You will often find a fat, grey-brown caterpillar curled in a C shape just under the soil.',
+   act:'Destroy any you find. Put a collar of cardboard or a cut plastic bottle around each transplant, pushed a little into the soil. Clear weeds a couple of weeks before planting, because the moths lay eggs on them.'},
+  {n:'Red spider mite', k:'pest', crops:['tomato','eggplant','beans','cowpea','@Gourd','okra','pepper','chilli'], parts:['leaf'],
+   see:'Leaves covered in fine pale speckles, then turning yellow or bronze and drying out. Fine webbing on the underside of leaves and on shoot tips when numbers are high.',
+   check:'Tap a leaf over white paper: tiny moving dots are mites. Worst in hot, dry weather.',
+   act:'Spray the undersides of leaves with water, remove badly affected leaves, and keep plants well watered. Broad-spectrum insecticides kill the mites\' natural enemies and often make things worse. If needed, use a miticide registered for the crop.'},
+  {n:'Whitefly', k:'pest', crops:['tomato','pepper','chilli','eggplant','beans','@Gourd','okra','sweetpotato'], parts:['leaf'],
+   see:'Clouds of tiny white flies that rise when the plant is shaken. Sticky leaves and sooty mould. They spread leaf-curl viruses (see "Virus diseases").',
+   check:'Look under the leaves for the adults and for flat, pale, scale-like young.',
+   act:'Use yellow sticky traps, remove weeds around the beds, and pull out old crops promptly after harvest. Soap sprays help on small plantings. For heavy attacks use a registered product and rotate product groups.'},
+  {n:'Tomato leafminer (Tuta absoluta)', k:'pest', crops:['tomato','potato','eggplant'], parts:['leaf','fruit'],
+   see:'Pale, papery blotches inside leaves with dark droppings, small caterpillars inside the mines, and small holes in green or ripe fruit. Shoot tips can be tunnelled.',
+   check:'Hold a leaf up to the light: the blotch mines are clearly visible. Reported in Zambia since 2017. Can destroy a tomato crop quickly.',
+   act:'Pick off and destroy infested leaves and fruit (bag or bury them, do not leave them on the ground). Pheromone traps help you see when moths arrive. Do not grow tomato after tomato, potato or eggplant. Use products registered against Tuta absoluta and rotate product groups, as it develops resistance.'},
+  {n:'Leaf miner flies', k:'pest', crops:['beans','peas','cowpea','tomato','@Gourd','lettuce','spinach','chard','beetroot','onion'], parts:['leaf'],
+   see:'Thin, winding white trails inside leaves (unlike the wide blotches of Tuta absoluta).',
+   check:'The trail widens as the tiny maggot grows; you may see it at the end of the trail.',
+   act:'Remove mined leaves early. Light attacks rarely affect yield. Avoid broad-spectrum sprays, which kill the tiny wasps that control leaf miners naturally.'},
+  {n:'African bollworm', k:'pest', crops:['tomato','sweetcorn','beans','cowpea','peas','okra','pepper','chilli'], parts:['fruit'],
+   see:'Round holes bored into fruit, pods or maize cobs, often with droppings. A green, brown or pinkish caterpillar up to 4 cm long, sometimes half inside the fruit.',
+   check:'Look for eggs and young caterpillars on flowers and young fruit.',
+   act:'Hand-pick caterpillars and remove damaged fruit. Bt products work on young caterpillars. Check regularly from flowering onwards. Growing maize next to tomato can build up this pest.'},
+  {n:'Fall armyworm', k:'pest', crops:['sweetcorn'], parts:['leaf','fruit'],
+   see:'Ragged holes in leaves and wet, sawdust-like droppings in the funnel (whorl) of young maize. Later the caterpillars bore into cobs.',
+   check:'The caterpillar has a pale upside-down "Y" on its head and four dark dots in a square near the tail end. Present in Zambia since the 2016/17 season.',
+   act:'Scout young maize twice a week. Crush egg masses and caterpillars. Treat early, aiming into the whorl, with a product registered for fall armyworm; large caterpillars inside cobs are hard to reach. Putting sand, soil or ash in the whorl is a traditional method with limited evidence.'},
+  {n:'Fruit flies', k:'pest', crops:['@Gourd','tomato','pepper','chilli'], parts:['fruit'],
+   see:'Small sting marks on fruit, soft rotting patches, and white maggots inside. Fruit often drops early.',
+   check:'Cut open a damaged fruit to look for maggots.',
+   act:'Collect and destroy all fallen and stung fruit (bury it deep or seal it in a bag). Bait traps help reduce numbers. Small fruits can be covered with paper bags.'},
+  {n:'Thrips', k:'pest', crops:['@Onion','@Cabbage'], parts:['leaf'],
+   see:'Silvery-white streaks and flecks on leaves, with leaf tips turning brown and dry. Bulbs stay small.',
+   check:'Look deep between the leaves at the base for tiny, slender, pale or dark insects. Worst in hot, dry weather.',
+   act:'Overhead watering or rain reduces numbers. Control weeds and do not plant next to older, infested onions. Use a registered product if needed.'},
+  {n:'Sweet potato weevil', k:'pest', crops:['sweetpotato'], parts:['root'],
+   see:'Small holes and tunnels in the tubers and the base of the vines. Damaged tubers taste bitter and are inedible.',
+   check:'Adults look like slim ants with a long snout. Damage is worse in dry soil that cracks.',
+   act:'Plant clean cuttings taken from vine tips. Earth up soil to fill cracks around the plants. Harvest on time and do not leave tubers in the ground. Do not plant sweet potato in the same place each year.'},
+  {n:'Termites', k:'pest', crops:['all'], parts:['wilt','root'],
+   see:'Plants wilt and die, with roots or the stem base eaten away, often in dry spells. Mud runways on stems.',
+   check:'Pull up a wilted plant and look for termites in the roots and stem base.',
+   act:'Keep plants well watered in dry spells, since stressed plants are attacked more. Remove dead crop residue that attracts them. Severe cases may need a registered soil treatment.'},
+  {n:'Root-knot nematodes', k:'pest', crops:['tomato','pepper','chilli','eggplant','okra','beans','cowpea','@Gourd','carrot','potato','lettuce'], parts:['root','wilt'],
+   see:'Plants stunted and yellowish, wilting in the heat of the day even though the soil is moist. Carrots fork and become hairy.',
+   check:'Pull up a plant: knobbly swellings (galls) on the roots confirm it. Bean and pea roots also have small nitrogen nodules that rub off easily; nematode galls do not.',
+   act:'Rotate with less susceptible crops and add plenty of compost. Choose resistant tomato varieties (often marked "N" on the packet). Pull out and destroy roots after harvest rather than leaving them. In a hot, dry month, covering moist, bare soil with clear plastic for 4 to 6 weeks (solarising) reduces numbers.'},
+  {n:'Bacterial wilt', k:'disease', crops:['tomato','potato','eggplant','pepper','chilli'], parts:['wilt'],
+   see:'The whole plant, or one side of it, wilts suddenly while the leaves are still green. It does not recover in the evening.',
+   check:'Cut a piece of stem near the soil and hang it in a clear glass of water. Milky threads streaming out of the cut end within a few minutes confirm bacterial wilt.',
+   act:'There is no cure. Pull out and remove affected plants with the soil around the roots. Do not plant tomato, potato, eggplant or peppers in that bed for at least 3 years. Avoid moving soil or run-off water from infected beds, and use certified seed potatoes.'},
+  {n:'Early blight', k:'disease', crops:['tomato','potato'], parts:['leaf','fruit'],
+   see:'Brown spots with rings like a target, often with a yellow edge, starting on the oldest, lowest leaves. Dark sunken patches near the stalk on fruit.',
+   check:'The ringed pattern is the main sign. It spreads upwards through the plant.',
+   act:'Remove affected lower leaves, mulch the soil, and water at the base rather than over the leaves. Rotate beds. A registered fungicide can protect new growth.'},
+  {n:'Late blight', k:'disease', crops:['tomato','potato'], parts:['leaf','fruit','wilt'],
+   see:'Large, dark, water-soaked patches on leaves and stems that spread very fast in cool, wet weather. Firm, greasy brown patches on fruit. Potato tubers rot.',
+   check:'In humid mornings a white fuzz appears under the leaves at the edge of the patches.',
+   act:'Act fast: remove and destroy infected plants. In cool, wet spells protect healthy plants with a registered fungicide before symptoms appear. Keep potato and tomato apart, and do not keep potatoes from a blighted crop for seed.'},
+  {n:'Powdery mildew', k:'disease', crops:['@Gourd','peas','okra','beans','tomato','pepper','chilli'], parts:['leaf'],
+   see:'White, powdery patches on the upper side of leaves that spread until leaves yellow and dry.',
+   check:'The powder rubs off. Common when days are dry and nights humid.',
+   act:'Give plants space for air to move, remove the worst leaves, and choose resistant varieties. Sulphur or other registered products control it; some cucurbit varieties are damaged by sulphur in hot weather, so read the label.'},
+  {n:'Downy mildew', k:'disease', crops:['@Gourd','@Cabbage','lettuce','spinach','@Onion'], parts:['leaf'],
+   see:'Yellow patches on the upper leaf, often squared off by the veins, with grey or purplish fuzz underneath.',
+   check:'Look under the leaves early in the morning. Favoured by cool, damp nights and wet weather.',
+   act:'Water in the morning and at the base, space plants for airflow, and remove affected leaves. Use a registered fungicide if it spreads.'},
+  {n:'Black rot of cabbages', k:'disease', crops:['@Cabbage'], parts:['leaf'],
+   see:'Yellow V-shaped patches starting at the leaf edge, with the veins inside them turning black.',
+   check:'Cut across the base of an affected leaf stalk: a black ring in the veins confirms it. Worse in warm, wet weather.',
+   act:'It is carried on seed, so buy seed from a reliable supplier. Remove affected plants and crop residue, and keep cabbage-family crops out of that bed for 2 to 3 years.'},
+  {n:'Leaf spot of beet and chard', k:'disease', crops:['beetroot','chard','spinach'], parts:['leaf'],
+   see:'Small round spots with pale tan centres and a reddish-purple border. Spots merge and leaves die.',
+   check:'Starts on older leaves. Worst in warm, humid weather.',
+   act:'Remove spotted leaves, avoid wetting the leaves, and rotate. Clear old crop residue.'},
+  {n:'Purple blotch of onions', k:'disease', crops:['@Onion'], parts:['leaf'],
+   see:'Small white spots that grow into purple patches with a yellow edge, often with dark rings. Leaves fold over and die.',
+   check:'Common after rain and heavy dew, and on leaves already damaged by thrips.',
+   act:'Control thrips, space plants for airflow, rotate, and use a registered fungicide in wet spells.'},
+  {n:'Bean rust', k:'disease', crops:['beans','cowpea'], parts:['leaf'],
+   see:'Small reddish-brown, powdery spots, mostly under the leaves, which may have a yellow halo.',
+   check:'The powder (spores) comes off on your finger.',
+   act:'Use resistant varieties, rotate, and remove old bean plants after harvest. Avoid working among plants when they are wet.'},
+  {n:'Maize streak virus', k:'disease', crops:['sweetcorn'], parts:['leaf'],
+   see:'Narrow, broken yellow streaks running along the leaf veins. Plants infected young are badly stunted.',
+   check:'Spread by small leafhoppers. Late plantings are usually hit hardest.',
+   act:'There is no cure. Plant early in the season, choose tolerant varieties, and pull up badly affected young plants.'},
+  {n:'Virus diseases (mosaic and leaf curl)', k:'disease', crops:['@Gourd','beans','cowpea','pepper','chilli','tomato','sweetpotato','potato'], parts:['leaf','fruit'],
+   see:'Leaves mottled light and dark green, crinkled, curled upwards or very small. Plants stunted and fruit distorted or mottled.',
+   check:'Usually scattered plants at first, often where aphids or whitefly are present.',
+   act:'There is no cure. Remove affected plants early, control aphids and whitefly, clear weeds, and use clean seed and healthy planting material.'},
+  {n:'Damping-off', k:'disease', crops:['all'], parts:['seedling'],
+   see:'Seedlings collapse at soil level; the stem there is thin, dark and water-soaked. Some seeds rot before they come up.',
+   check:'Most common in seed trays that are kept too wet or crowded.',
+   act:'Use clean trays and fresh seedling mix, sow thinly, water less often, and give the trays air and light. Throw away affected trays of seedlings.'},
+  {n:'Blossom end rot', k:'disorder', crops:['tomato','pepper','chilli','watermelon'], parts:['fruit'],
+   see:'A dark, leathery, sunken patch on the bottom (flower end) of the fruit.',
+   check:'Not an infection. It comes from a shortage of calcium in the fruit, usually because watering is uneven.',
+   act:'Water deeply and regularly and mulch to keep the soil evenly moist. Remove affected fruit; later fruit is usually fine once watering is steady.'},
+  {n:'Nitrogen shortage', k:'disorder', crops:['all'], parts:['leaf'],
+   see:'Older, lower leaves turn evenly pale green to yellow first, and the whole plant grows slowly.',
+   check:'Yellowing that starts on the youngest leaves points to something else.',
+   act:'Side-dress with compost, well-rotted manure or a nitrogen fertiliser, and water it in.'}
+];
+const PARTS = {any:'Any symptom', leaf:'Leaves', fruit:'Fruit, pods or cobs', root:'Roots, stem base or tubers', wilt:'Wilting or stunted', seedling:'Seedlings'};
+const KIND = {pest:'Pest', disease:'Disease', disorder:'Growing problem'};
+let pestCrop = 'all', pestPart = 'any', pestQ = '';
+function pestCropIds(p){
+  const ids = new Set();
+  p.crops.forEach(x=>{ if(x[0]==='@') (FAM[x.slice(1)]||[]).forEach(i=>ids.add(i)); else ids.add(x); });
+  // A crop you added counts as part of the family you chose for it.
+  CROPS.forEach(c=>{ if(c.custom && c.rotfam && p.crops.includes('@'+c.rotfam)) ids.add(c.id); });
+  return ids;
+}
+function pestMatches(p){
+  if(pestPart!=='any' && !p.parts.includes(pestPart)) return false;
+  if(pestCrop!=='all' && !p.crops.includes('all') && !pestCropIds(p).has(pestCrop)) return false;
+  if(pestQ){ const q = pestQ.toLowerCase(); if(!(p.n+' '+p.see+' '+p.check).toLowerCase().includes(q)) return false; }
+  return true;
+}
+function pestCard(p){
+  const ids = p.crops.includes('all') ? null : [...pestCropIds(p)].map(i=>cropById(i)?.name).filter(Boolean);
+  return `<details class="guide pest"><summary><b>${esc(p.n)}</b><span class="tag ${p.k==='pest'?'ok':p.k==='disease'?'no':'good'}">${KIND[p.k]}</span></summary>
+    <h4>What you see</h4><p>${esc(p.see)}</p>
+    <h4>How to check</h4><p>${esc(p.check)}</p>
+    <h4>What to do</h4><p>${esc(p.act)}</p>
+    <p class="note">${ids ? 'Affects: '+esc(ids.join(', ')) : 'Affects most crops.'}</p></details>`;
+}
+function pestList(){
+  const l = PESTS.filter(pestMatches);
+  return l.length ? `<p class="muted small">${l.length} possible match${l.length>1?'es':''}. Tap one to read more.</p>` + l.map(pestCard).join('')
+    : `<div class="info">Nothing in the guide matches. Try "Any symptom", a different crop, or fewer words in the search.</div>`;
+}
+function viewPests(){
+  return `<h2>Pests and diseases</h2>
+  <p class="small muted">Pick the crop and where the problem shows to narrow the list, then compare what you see with each description.</p>
+  <label class="f" for="pestCrop">Crop</label>
+  <select id="pestCrop"><option value="all">All crops</option>${CROPS.map(c=>`<option value="${c.id}"${pestCrop===c.id?' selected':''}>${esc(c.name)}</option>`).join('')}</select>
+  <label class="f">Where is the problem?</label>
+  <div class="row" style="flex-wrap:wrap">${Object.entries(PARTS).map(([k,v])=>`<button class="chip" style="flex:0 0 auto" data-ppart="${k}" aria-pressed="${pestPart===k}">${v}</button>`).join('')}</div>
+  <label class="f" for="pestQ">Search (optional)</label><input type="text" id="pestQ" value="${esc(pestQ)}" placeholder="e.g. holes, yellow, white powder">
+  <div id="pestList" style="margin-top:12px">${pestList()}</div>
+  <div class="info"><strong>This is a guide, not a diagnosis.</strong> Several problems can look alike. If a crop is badly affected, take a sample or photo to your local agricultural extension officer or an agro-dealer before spraying. Only use products registered for that crop in Zambia, and follow the label, including the waiting time before harvest. Descriptions are general horticultural guidance; Tuta absoluta and fall armyworm are listed because Zambia reported both to the IPPC in 2017.</div>`;
+}
+
 /* ================= Sheet ================= */
 function openSheet(html){ $('#panel').innerHTML=html; $('#sheet').hidden=false; document.body.style.overflow='hidden'; $('#panel').scrollTop=0; }
 function closeSheet(){ $('#sheet').hidden=true; document.body.style.overflow=''; }
@@ -694,6 +858,7 @@ document.addEventListener('click', ev=>{
   const d = b.dataset;
   if(d.export!==undefined){ exportData(); return; }
   if(d.import!==undefined){ $('#importFile').click(); return; }
+  if(d.ppart){ pestPart=d.ppart; document.querySelectorAll('[data-ppart]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.ppart===pestPart)); $('#pestList').innerHTML=pestList(); return; }
   if(d.newcrop!==undefined){ cropForm(); return; }
   if(d.editcrop){ cropForm(d.editcrop); return; }
   if(d.delcrop){ deleteCrop(d.delcrop); return; }
@@ -720,6 +885,7 @@ document.addEventListener('click', ev=>{
 });
 document.addEventListener('change', ev=>{
   const t = ev.target;
+  if(t.id==='pestCrop'){ pestCrop=t.value; $('#pestList').innerHTML=pestList(); return; }
   if(t.id==='cf-method'){ syncCropForm(); return; }
   if(t.id==='importFile'){ if(t.files[0]) importData(t.files[0]); t.value=''; return; }
   if(t.id==='station'){ S.station=t.value; if(STATIONS[t.value]) S.climate=JSON.parse(JSON.stringify(STATIONS[t.value])); save(); render(); return; }
@@ -727,6 +893,7 @@ document.addEventListener('change', ev=>{
   if(t.dataset.cl){ const [k,i]=t.dataset.cl.split('|'); const v=parseFloat(t.value); if(!isNaN(v)){ S.climate[k][+i]=v; S.station='custom'; save(); render(); } return; }
   if(t.id==='pDate'){ const c=cropById($('[data-addplant]')?.dataset.addplant); if(c) updatePreview(c); }
 });
+document.addEventListener('input', ev=>{ if(ev.target.id==='pestQ'){ pestQ=ev.target.value.trim(); $('#pestList').innerHTML=pestList(); } });
 document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !$('#sheet').hidden) closeSheet(); });
 $('#sheet').addEventListener('click', ev=>{ if(ev.target.id==='sheet') closeSheet(); });
 
