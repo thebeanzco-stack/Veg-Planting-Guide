@@ -204,7 +204,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
    frost: true if frost damages or kills it.
    days: days to first harvest; from: 'transplant' or 'sowing'. tray: weeks in the seed tray before transplanting.
    water: typical mm per week (1 mm on 1 m² = 1 litre). */
-const CROPS = [
+const BUILTIN = [
  {id:'tomato',name:'Tomato',fam:'Fruiting',method:'tray',tray:[4,6],depth:'0.5–1 cm',inrow:'45–60 cm',rows:'90–100 cm',days:[70,90],from:'transplant',harvest:6,water:[25,40],sun:'Full sun',opt:[18,27],frost:true,wetRisk:true,notes:'Stake or cage. Water at the base, not the leaves, to limit leaf disease.'},
  {id:'pepper',name:'Sweet pepper',fam:'Fruiting',method:'tray',tray:[6,8],depth:'0.5–1 cm',inrow:'40–50 cm',rows:'60–75 cm',days:[60,90],from:'transplant',harvest:8,water:[25,35],sun:'Full sun',opt:[20,30],frost:true,notes:'Slow to germinate. Keep the tray warm.'},
  {id:'chilli',name:'Chilli',fam:'Fruiting',method:'tray',tray:[6,8],depth:'0.5 cm',inrow:'40–50 cm',rows:'60–75 cm',days:[70,100],from:'transplant',harvest:12,water:[20,30],sun:'Full sun',opt:[20,30],frost:true,notes:'Can keep cropping for many months in a warm spot.'},
@@ -234,6 +234,9 @@ const CROPS = [
  {id:'garlic',name:'Garlic',fam:'Root',method:'cloves',depth:'Cloves 2.5–5 cm deep, point up',inrow:'10–15 cm',rows:'25–30 cm',days:[120,180],from:'sowing',harvest:3,water:[20,25],sun:'Full sun',opt:[12,20],frost:false,notes:'Needs a cool spell to form good bulbs, so it belongs in the cool season. Planted from cloves. Stop watering 2–3 weeks before harvest.'},
  {id:'peas',name:'Peas',fam:'Legume',method:'direct',depth:'2.5–4 cm',inrow:'5–8 cm',rows:'45–60 cm',days:[60,70],from:'sowing',harvest:4,water:[20,25],sun:'Full sun',opt:[13,21],frost:false,notes:'Flowers can be damaged by hard frost even though plants survive.'}
 ];
+let CROPS = BUILTIN;
+/* Crops the user adds live in S.custom and are merged in after the built-in list. */
+function refreshCrops(){ CROPS = BUILTIN.concat(Array.isArray(S.custom) ? S.custom : []); }
 /* ================= Companion planting =================
    ev: 'res' = supported by research; 'est' = well established (shared pests or diseases);
        'trad' = traditional gardening practice with limited scientific evidence. */
@@ -246,7 +249,7 @@ const FAM = {
   Beet:['beetroot','chard','spinach']
 };
 const FAMNAME = {Nightshade:'nightshade family (tomato, peppers, eggplant, potato)', Cabbage:'cabbage family (brassicas)', Gourd:'gourd family (cucurbits)', Legume:'legume family', Onion:'onion family', Beet:'beet family'};
-const famOf = id => Object.keys(FAM).find(k=>FAM[k].includes(id));
+const famOf = id => { const c = CROPS.find(x=>x.id===id); if(c && c.custom) return c.rotfam && FAM[c.rotfam] ? c.rotfam : undefined; return Object.keys(FAM).find(k=>FAM[k].includes(id)); };
 const EV = {res:['res','Research-backed'], est:['est','Well established'], trad:['trad','Traditional practice']};
 const PAIRS = [];
 const pair = (as, bs, kind, why, ev) => as.forEach(a=>bs.forEach(b=>{ if(a!==b) PAIRS.push({a,b,kind,why,ev}); }));
@@ -271,24 +274,42 @@ pair(['beans','peas','cowpea'],['onion','garlic'],'avoid','Gardeners commonly sa
 function companions(id){
   const good=[], avoid=[];
   PAIRS.forEach(p=>{ const o = p.a===id ? p.b : p.b===id ? p.a : null; if(!o) return; (p.kind==='good'?good:avoid).push({id:o, why:p.why, ev:p.ev}); });
+  const f = famOf(id), me = CROPS.find(x=>x.id===id);
+  if(f) CROPS.forEach(o=>{ if(o.id!==id && (o.custom || (me&&me.custom)) && famOf(o.id)===f) avoid.push({id:o.id, why:'Same family ('+FAMNAME[f]+'). Families share pests and diseases, so rotate beds rather than following one with the other.', ev:'est'}); });
   const dedupe = l => { const m=new Map(); l.forEach(x=>{ const e=m.get(x.id); if(!e) m.set(x.id,{...x}); else if(!e.why.includes(x.why)) e.why += ' ' + x.why; }); return [...m.values()]; };
   return {good:dedupe(good), avoid:dedupe(avoid)};
 }
 
+const FAMS = ['Fruiting','Vine','Leafy','Root','Legume','Grain','Other'];
 const METHOD = {direct:'Sow directly in the ground', tray:'Start in seed trays, then transplant', either:'Either: direct sow or seed trays', cuttings:'Plant vine cuttings', tubers:'Plant seed tubers', cloves:'Plant cloves directly'};
 
 /* ================= Storage ================= */
 const KEY = 'veg-planting-guide.v1';
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-function fresh(){ return {v:2, upd:0, station:'kafue', region:'IIa', climate:JSON.parse(JSON.stringify(STATIONS.kafue)), picked:[], plantings:[], rain:{}}; }
+function fresh(){ return {v:2, upd:0, station:'kafue', region:'IIa', climate:JSON.parse(JSON.stringify(STATIONS.kafue)), picked:[], plantings:[], rain:{}, custom:[]}; }
 function normalize(s){
   const f=fresh(); const o=Object.assign(f, s||{}, {climate:(s&&s.climate&&s.climate.min)?s.climate:f.climate});
   // Version 2: Kafue becomes the default location (requested). Only switch if Lusaka's preset was untouched.
   if((o.v||1) < 2){ if(o.station==='lusaka'){ o.station='kafue'; o.climate=JSON.parse(JSON.stringify(STATIONS.kafue)); } o.v=2; }
+  o.custom = (Array.isArray(o.custom) ? o.custom : []).map(cleanCrop).filter(Boolean);
   return o;
+}
+const num = (v,d) => { const n = parseFloat(v); return isFinite(n) ? n : d; };
+const pairOf = (v,d) => { const a = Array.isArray(v) ? v : d; let x = num(a[0],d[0]), y = num(a[1],d[1]); if(y < x) [x,y] = [y,x]; return [x,y]; };
+function cleanCrop(c){
+  if(!c || typeof c!=='object' || !String(c.name||'').trim()) return null;
+  const method = METHOD[c.method] ? c.method : 'direct';
+  const usesTray = method==='tray' || method==='either';
+  return {id: /^my-[a-z0-9]+$/.test(c.id) ? c.id : 'my-'+uid(), custom:true,
+    name:String(c.name).trim().slice(0,60), fam: FAMS.includes(c.fam) ? c.fam : 'Other', rotfam: FAM[c.rotfam] ? c.rotfam : '',
+    method, tray: usesTray ? pairOf(c.tray,[4,6]) : undefined, from: method==='tray' ? 'transplant' : 'sowing',
+    depth:String(c.depth||'—'), inrow:String(c.inrow||'—'), rows:String(c.rows||'—'),
+    days: pairOf(c.days,[60,90]), harvest: Math.max(1, Math.round(num(c.harvest,4))), water: pairOf(c.water,[20,30]),
+    sun:String(c.sun||'Full sun'), opt: pairOf(c.opt,[18,27]), frost: !!c.frost, wetRisk: !!c.wetRisk, notes:String(c.notes||'')};
 }
 function loadLocal(){ try{ const r=localStorage.getItem(KEY); if(r) return normalize(JSON.parse(r)); }catch(e){} return fresh(); }
 let S = loadLocal();
+refreshCrops();
 function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 function save(){ S.upd = Date.now(); saveLocal(); }
 
@@ -305,8 +326,8 @@ function importData(file){
   r.onload = () => {
     let d; try{ d = JSON.parse(r.result); }catch(e){ toast('That file is not a planting guide backup.'); return; }
     if(!d || typeof d!=='object' || !Array.isArray(d.plantings) || typeof d.rain!=='object'){ toast('That file is not a planting guide backup.'); return; }
-    if(!confirm('Replace everything saved in this browser with the backup? ('+d.plantings.length+' plantings, '+Object.keys(d.rain||{}).length+' rain readings)')) return;
-    S = normalize(d); save(); render(); toast('Backup restored');
+    if(!confirm('Replace everything saved in this browser with the backup? ('+d.plantings.length+' plantings, '+Object.keys(d.rain||{}).length+' rain readings, '+(Array.isArray(d.custom)?d.custom.length:0)+' of your own crops)')) return;
+    S = normalize(d); refreshCrops(); save(); render(); toast('Backup restored');
   };
   r.readAsText(file);
 }
@@ -389,7 +410,7 @@ function cropRow(c){
   const v = VERD[monthVerdict(c, selMonth)];
   const picked = S.picked.includes(c.id);
   return `<div class="crop"><button class="pick" data-pick="${c.id}" aria-pressed="${picked}" aria-label="${picked?'Remove':'Add'} ${esc(c.name)} ${picked?'from':'to'} my selection">${picked?'✓':'+'}</button>
-    <button class="name" data-crop="${c.id}"><b>${esc(c.name)}</b><span>${esc(METHOD[c.method])}</span></button>
+    <button class="name" data-crop="${c.id}"><b>${esc(c.name)}</b><span>${c.custom?'Your crop · ':''}${esc(METHOD[c.method])}</span></button>
     <span class="tag ${v[0]}">${v[1]}</span></div>`;
 }
 
@@ -410,6 +431,7 @@ function viewPlan(){
   if(S.picked.length && filter==='picked'){
     h += `<h2>Growing guide for your selection</h2>` + S.picked.map(id=>cropById(id)).filter(Boolean).map(c=>guideCard(c,false)).join('');
   }
+  h += `<div class="btns"><button class="btn ghost" data-newcrop>+ Add your own crop</button></div>`;
   h += `<div class="info"><strong>How "good time" is worked out.</strong> The app takes the months the crop would be in the ground if sown mid-${MONTHS[selMonth]}, and compares each month's average temperature with the range the crop prefers. Spacing, depth and days to harvest are typical figures; the seed packet for your variety takes priority.</div>`;
   return h;
 }
@@ -474,11 +496,58 @@ function cropSheet(id){
     ${c.method==='either'?`<label class="f">Method</label><div class="row"><button class="chip" data-pm="direct" aria-pressed="true">Direct</button><button class="chip" data-pm="tray" aria-pressed="false">Seed tray</button></div>`:''}
     <div id="preview"></div>
     <div class="btns"><button class="btn" data-addplant="${c.id}">Add to my garden</button>
-    <button class="btn ghost" data-pick="${c.id}" aria-pressed="${picked}">${picked?'Remove from my selection':'Add to my selection'}</button></div>`);
+    <button class="btn ghost" data-pick="${c.id}" aria-pressed="${picked}">${picked?'Remove from my selection':'Add to my selection'}</button>
+    ${c.custom?`<button class="btn ghost" data-editcrop="${c.id}">Edit this crop</button><button class="btn ghost" data-delcrop="${c.id}">Delete this crop</button>`:''}</div>`);
   pm = 'direct';
   updatePreview(c);
 }
 let pm = 'direct';
+function cropForm(id){
+  const c = id ? cropById(id) : {name:'', fam:'Leafy', rotfam:'', method:'direct', tray:[4,6], days:[60,90], harvest:4, water:[20,30], opt:[15,25], frost:false, wetRisk:false, depth:'', inrow:'', rows:'', sun:'Full sun', notes:''};
+  const nums = (lab, key, a, unit, step) => `<label class="f">${lab}</label><div class="row"><input type="number" inputmode="decimal" step="${step||1}" id="cf-${key}0" value="${a[0]}" aria-label="${lab} from"><span style="flex:0;align-self:center">to</span><input type="number" inputmode="decimal" step="${step||1}" id="cf-${key}1" value="${a[1]}" aria-label="${lab} to"><span style="flex:0;align-self:center" class="muted small">${unit}</span></div>`;
+  const opt = (v, cur, lab) => `<option value="${v}"${v===cur?' selected':''}>${esc(lab)}</option>`;
+  openSheet(`<div class="panel-head"><h2>${id?'Edit crop':'Add your own crop'}</h2><button class="x" data-close aria-label="Close">✕</button></div>
+    <p class="small muted">Use the figures from your seed packet. Only the name is required; the rest start with typical values you can change.</p>
+    <label class="f" for="cf-name">Name</label><input type="text" id="cf-name" maxlength="60" value="${esc(c.name)}" placeholder="e.g. Amaranth (bondwe)">
+    <label class="f" for="cf-fam">Type</label><select id="cf-fam">${FAMS.map(f=>opt(f,c.fam,f)).join('')}</select>
+    <label class="f" for="cf-method">How to plant</label><select id="cf-method">${Object.entries(METHOD).map(([k,v])=>opt(k,c.method,v)).join('')}</select>
+    <div id="cf-traybox">${nums('Weeks in seed tray','tray',c.tray||[4,6],'weeks')}</div>
+    ${nums('Days to first harvest','days',c.days,'days')}
+    <p class="small muted" style="margin-top:4px" id="cf-fromnote"></p>
+    <label class="f" for="cf-harvest">Harvest keeps going for</label><div class="row"><input type="number" inputmode="numeric" id="cf-harvest" value="${c.harvest}"><span style="flex:0;align-self:center" class="muted small">weeks</span></div>
+    ${nums('Preferred average temperature','opt',c.opt,'°C',0.5)}
+    <label class="f"><input type="checkbox" id="cf-frost"${c.frost?' checked':''}> Damaged by frost</label>
+    <label class="f"><input type="checkbox" id="cf-wet"${c.wetRisk?' checked':''}> Prone to disease in wet weather</label>
+    ${nums('Water','water',c.water,'mm a week')}
+    <label class="f" for="cf-depth">Sowing depth</label><input type="text" id="cf-depth" value="${esc(c.depth==='—'?'':c.depth)}" placeholder="e.g. 1–2 cm">
+    <label class="f" for="cf-inrow">Spacing in the row</label><input type="text" id="cf-inrow" value="${esc(c.inrow==='—'?'':c.inrow)}" placeholder="e.g. 30 cm">
+    <label class="f" for="cf-rows">Between rows</label><input type="text" id="cf-rows" value="${esc(c.rows==='—'?'':c.rows)}" placeholder="e.g. 45 cm">
+    <label class="f" for="cf-sun">Sun</label><input type="text" id="cf-sun" value="${esc(c.sun)}">
+    <label class="f" for="cf-rot">Plant family, for rotation (optional)</label><select id="cf-rot">${opt('',c.rotfam||'','Not sure / none of these')}${Object.keys(FAM).map(k=>opt(k,c.rotfam,FAMNAME[k])).join('')}</select>
+    <label class="f" for="cf-notes">Notes</label><textarea id="cf-notes" rows="3">${esc(c.notes)}</textarea>
+    <div class="btns"><button class="btn" data-savecrop="${id||''}">${id?'Save changes':'Add crop'}</button></div>`);
+  syncCropForm();
+}
+function syncCropForm(){
+  const m = $('#cf-method')?.value; if(!m) return;
+  $('#cf-traybox').hidden = !(m==='tray' || m==='either');
+  $('#cf-fromnote').textContent = m==='tray' ? 'Counted from transplanting.' : 'Counted from sowing.';
+}
+function saveCropForm(id){
+  const name = $('#cf-name').value.trim(); if(!name){ toast('Give the crop a name.'); $('#cf-name').focus(); return; }
+  const v = k => $('#cf-'+k).value;
+  const c = cleanCrop({id: id||undefined, name, fam:v('fam'), rotfam:v('rot'), method:v('method'), tray:[v('tray0'),v('tray1')],
+    days:[v('days0'),v('days1')], harvest:v('harvest'), water:[v('water0'),v('water1')], opt:[v('opt0'),v('opt1')],
+    frost:$('#cf-frost').checked, wetRisk:$('#cf-wet').checked, depth:v('depth').trim(), inrow:v('inrow').trim(), rows:v('rows').trim(), sun:v('sun').trim(), notes:v('notes').trim()});
+  if(id){ const i = S.custom.findIndex(x=>x.id===id); if(i>=0) S.custom[i] = c; } else S.custom.push(c);
+  refreshCrops(); save(); cropSheet(c.id); render(); toast(id?'Crop updated':'Crop added');
+}
+function deleteCrop(id){
+  const n = S.plantings.filter(p=>p.crop===id).length;
+  if(!confirm(n ? `Delete this crop and its ${n} planting${n>1?'s':''} in My garden?` : 'Delete this crop?')) return;
+  S.custom = S.custom.filter(x=>x.id!==id); S.plantings = S.plantings.filter(p=>p.crop!==id); S.picked = S.picked.filter(x=>x!==id);
+  refreshCrops(); save(); closeSheet(); render(); toast('Crop deleted');
+}
 function cropWithMethod(c, method){
   if(c.method!=='either') return c;
   if(method==='tray') return {...c, method:'tray', from:'transplant', days: c.from==='transplant'?c.days:[Math.max(10,c.days[0]-Math.round(c.tray[0]*7*0.6)), Math.max(15,c.days[1]-Math.round(c.tray[1]*7*0.6))]};
@@ -625,6 +694,10 @@ document.addEventListener('click', ev=>{
   const d = b.dataset;
   if(d.export!==undefined){ exportData(); return; }
   if(d.import!==undefined){ $('#importFile').click(); return; }
+  if(d.newcrop!==undefined){ cropForm(); return; }
+  if(d.editcrop){ cropForm(d.editcrop); return; }
+  if(d.delcrop){ deleteCrop(d.delcrop); return; }
+  if(d.savecrop!==undefined){ saveCropForm(d.savecrop); return; }
   if(d.tab){ tab=d.tab; render(); window.scrollTo(0,0); return; }
   if(d.close!==undefined){ closeSheet(); return; }
   if(d.month){ selMonth=+d.month; render(); return; }
@@ -647,6 +720,7 @@ document.addEventListener('click', ev=>{
 });
 document.addEventListener('change', ev=>{
   const t = ev.target;
+  if(t.id==='cf-method'){ syncCropForm(); return; }
   if(t.id==='importFile'){ if(t.files[0]) importData(t.files[0]); t.value=''; return; }
   if(t.id==='station'){ S.station=t.value; if(STATIONS[t.value]) S.climate=JSON.parse(JSON.stringify(STATIONS[t.value])); save(); render(); return; }
   if(t.id==='region'){ S.region=t.value; save(); render(); return; }
